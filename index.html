@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>俊賢的工作與薪水記錄表</title>
+  <!-- Google Fonts: Noto Sans TC & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap"
+    rel="stylesheet">
+  <!-- CSS Stylesheet & Favicon -->
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="styles.css?v=1.0.6">
+  <!-- PocketBase JS SDK -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pocketbase/0.21.1/pocketbase.umd.js"></script>
+  <!-- SheetJS for Excel Importer -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="header-main">
+        <h1>俊賢的工作與薪水記錄表</h1>
+        <p class="subtitle">每日上班地點、工時、薪資與加班記錄工具</p>
+      </div>
+      <!-- 使用者登入狀態列 -->
+      <div class="header-user-profile" id="user-profile-widget" style="display: none;">
+        <div class="user-avatar-placeholder"
+          style="width: 32px; height: 32px; border-radius: 50%; background-color: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.9rem;"
+          id="user-avatar-initial">👤</div>
+        <div class="user-info">
+          <span id="user-name" class="user-name">載入中...</span>
+        </div>
+        <button id="logout-btn" class="btn btn-sm btn-outline">登出</button>
+      </div>
+      <div class="header-actions">
+        <button id="export-csv" class="btn btn-primary" title="匯出成 Excel 可開啟的 CSV 檔案">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path
+              d="M14 14V4.5L9.5 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2zM9.5 3A1.5 1.5 0 0 0 11 4.5h2V14a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1h5.5v2z" />
+            <path
+              d="M4.603 12.087a.81.81 0 0 1-.438-.42c-.195-.388-.13-.776.08-1.102.193-.3.53-.513.92-.629.414-.122.922-.118 1.408-.031c.214.038.447.094.673.167.03-.164.053-.374.051-.611-.004-.44-.124-.808-.38-.977-.168-.11-.478-.186-.902-.156-.379.034-.657.162-.83.389-.157.2-.178.417-.116.577l-.907.4c-.16-.425-.098-.91.216-1.312.33-.422.89-.687 1.625-.75 1.01-.086 1.83.253 2.196.883.3.518.283 1.166.19 1.68l-.048.243c.37.152.848.317 1.196.4.392.093.805.162 1.161.051.29-.09.492-.261.602-.513.12-.278.069-.61-.133-.8l.654-.646c.456.416.59 1.05.351 1.602-.277.638-.85.932-1.464 1.02-.63.09-1.344-.11-1.927-.348-.107-.044-.224-.092-.339-.14-.244.414-.582.78-1.01 1.01-.524.282-1.162.274-1.722-.057zm.162-2.179c-.08.06-.153.145-.19.258-.018.051-.03.112-.024.182.012.15.11.353.372.454.247.095.495.038.707-.123.18-.137.35-.346.488-.588a8.2 8.2 0 0 0-.738-.115 2.23 2.23 0 0 0-.615.032zm3.967.72c-.027.004-.056.002-.088-.002l-.096-.012c-.254-.035-.617-.114-.997-.245a10.758 10.758 0 0 1 .38-.534c.183-.23.326-.47.41-.697.102-.024.21-.043.321-.056.29-.035.502.046.617.22.115.174.08.396-.063.512-.1.08-.246.162-.484.214z" />
+          </svg>
+          匯出 Excel (CSV)
+        </button>
+        <button id="export-img" class="btn btn-secondary" title="匯出成圖片檔案">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path
+              d="M.002 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-12a2 2 0 0 1-2-2V3zm1 9 2.5-3 2.5 3h7a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1h-12a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1z" />
+            <path d="M8 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" />
+          </svg>
+          匯出圖片
+        </button>
+        <button id="print-btn" class="btn btn-secondary" title="列印此月薪資報表">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z" />
+            <path
+              d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zM4 3a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2H4V3zm1 5a2.5 2.5 0 0 0-2.5 2.5v3a.5.5 0 0 0 .5.5h1v-1a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1h1a.5.5 0 0 0 .5-.5v-3A2.5 2.5 0 0 0 11 8H5z" />
+          </svg>
+          列印報表
+        </button>
+      </div>
+    </header>
+
+    <!-- 模式切換器 -->
+    <div class="mode-switcher-container card animate-fade-in"
+      style="margin-bottom: 1.5rem; padding: 0.35rem; display: flex; gap: 0.5rem; border-radius: var(--radius-lg);">
+      <button id="mode-dayrate-btn" class="mode-tab active"
+        style="flex: 1; border-radius: var(--radius-md); font-weight: 600;">🚚 日薪外車模式</button>
+      <button id="mode-overtime-btn" class="mode-tab"
+        style="flex: 1; border-radius: var(--radius-md); font-weight: 600;">📊 月薪加班模式</button>
+    </div>
+
+    <div class="app-grid">
+      <!-- 左側/上方控制與設定面板 -->
+      <aside class="control-panel card animate-fade-in">
+        <h2 class="card-title">月份與設定</h2>
+
+        <!-- 年月份選擇器 -->
+        <div class="control-group">
+          <label class="control-label">選擇查詢月份</label>
+          <div class="month-selector">
+            <div class="spinner-input">
+              <label for="year-input">年度</label>
+              <div class="spinner-controls">
+                <button id="year-prev" class="spinner-btn" aria-label="上一年">−</button>
+                <input type="number" id="year-input" min="2000" max="2100" value="2026">
+                <button id="year-next" class="spinner-btn" aria-label="下一年">+</button>
+              </div>
+            </div>
+            <div class="spinner-input">
+              <label for="month-input">月份</label>
+              <div class="spinner-controls">
+                <button id="month-prev" class="spinner-btn" aria-label="上個月">−</button>
+                <input type="number" id="month-input" min="1" max="12" value="6">
+                <button id="month-next" class="spinner-btn" aria-label="下個月">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider mode-dayrate-only"></div>
+
+        <!-- 薪資參數設定 (日薪模式) -->
+        <div class="control-group mode-dayrate-only">
+          <label for="default-wage" class="control-label">預設日薪 (整天)</label>
+          <div class="input-with-unit">
+            <span class="unit">NT$</span>
+            <input type="number" id="default-wage" min="0" value="3000" placeholder="例如: 3000">
+          </div>
+          <p class="help-text">填寫「整天(1.0)」或「半天(0.5)」時會以此金額自動計算</p>
+        </div>
+
+        <div class="divider mode-dayrate-only"></div>
+
+        <!-- 常用工作地點 (日薪模式) -->
+        <div class="control-group mode-dayrate-only">
+          <label class="control-label">常用工作地點</label>
+          <div id="location-tags" class="tag-container">
+            <!-- 動態生成標籤 -->
+          </div>
+          <div class="input-action-group">
+            <input type="text" id="new-location-input" placeholder="新增地點..." maxlength="20">
+            <button id="add-location-btn" class="btn btn-sm btn-secondary">新增</button>
+          </div>
+        </div>
+
+        <div class="divider mode-dayrate-only"></div>
+
+        <!-- 月薪與加給設定 (加班模式) -->
+        <div class="control-group mode-overtime-only">
+          <label for="monthly-salary" class="control-label">目前底薪 (元)</label>
+          <div class="input-with-unit">
+            <span class="unit">NT$</span>
+            <input type="number" id="monthly-salary" value="36800">
+          </div>
+        </div>
+
+        <div class="control-group mode-overtime-only">
+          <label for="leader-allowance" class="control-label">指導/領導加給 (元)</label>
+          <div class="input-with-unit">
+            <span class="unit">NT$</span>
+            <input type="number" id="leader-allowance" value="3000">
+          </div>
+        </div>
+
+        <div class="control-group mode-overtime-only font-sm"
+          style="display: flex; flex-direction: column; gap: 0.35rem; background: var(--border-light); padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--card-border);">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: var(--text-secondary); font-weight: 500;">加班費時薪:</span>
+            <span style="font-weight: 700; color: #d35400; font-family: 'Inter', monospace;"><span
+                id="overtime-hourly-wage">0</span> 元</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: var(--text-secondary); font-weight: 500;">請假扣薪時薪:</span>
+            <span style="font-weight: 700; color: #c0392b; font-family: 'Inter', monospace;"><span
+                id="leave-hourly-wage">0</span> 元</span>
+          </div>
+        </div>
+
+        <div class="divider mode-overtime-only"></div>
+
+        <!-- 資料備份與還原 -->
+        <div class="control-group font-sm">
+          <label class="control-label">資料備份與還原</label>
+          <div class="backup-actions">
+            <button id="backup-btn" class="btn btn-sm btn-outline">備份資料 (JSON)</button>
+            <button id="restore-trigger-btn" class="btn btn-sm btn-outline">匯入備份</button>
+            <input type="file" id="restore-file-input" accept=".json" style="display: none;">
+          </div>
+          <p class="help-text">將資料匯出成備份檔下載，或由此還原資料。</p>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 切換檢視的帳本 -->
+        <div class="control-group font-sm" id="book-selector-group">
+          <label class="control-label">切換檢視帳本</label>
+          <div class="input-action-group">
+            <input type="text" id="switch-book-input" placeholder="輸入他人的帳號 (Username)...">
+            <button id="switch-book-btn" class="btn btn-sm btn-primary">切換</button>
+          </div>
+          <div class="active-book-indicator"
+            style="margin-top: 0.5rem; display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+            <span id="active-book-label"
+              style="font-weight: 600; color: var(--primary); font-size: 0.8rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">目前檢視：我的帳本</span>
+            <button id="reset-book-btn" class="btn btn-sm btn-outline"
+              style="display: none; padding: 0.2rem 0.5rem; flex-shrink: 0;">回自己</button>
+          </div>
+          <p class="help-text">輸入別人的帳號可以檢視並編輯對方分享給您的帳本</p>
+        </div>
+
+        <hr class="divider">
+
+        <!-- 分享您的帳本給他人 -->
+        <div class="control-group font-sm" id="whitelist-control-group">
+          <label class="control-label">分享您的帳本給他人</label>
+          <div id="whitelist-tags" class="tag-container">
+            <!-- 經授權的使用者帳號標籤 -->
+          </div>
+          <div class="input-action-group">
+            <input type="text" id="new-user-input" placeholder="新增對方的帳號 (Username)...">
+            <button id="add-user-btn" class="btn btn-sm btn-secondary">分享</button>
+          </div>
+          <p class="help-text">新增對方的帳號後，對方登入即可切換至您的帳本共同編輯</p>
+        </div>
+      </aside>
+
+      <!-- 右側/下方詳細記錄表格 -->
+      <main class="main-panel card animate-fade-in delay-1">
+        <div class="table-header-container">
+          <h2 class="card-title table-title">
+            <span id="current-period-display">2026 年 6 月</span> <span id="table-mode-title-suffix">詳細工作明細</span>
+          </h2>
+          <span class="status-badge" id="save-status">自動存檔中</span>
+        </div>
+
+        <div id="table-meta-bar" class="mode-overtime-only"
+          style="margin-top: -0.75rem; margin-bottom: 1.25rem; font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; border-bottom: 1px dashed var(--border-color); padding-bottom: 0.5rem;">
+          底薪：$<span id="meta-monthly-salary">36,800</span> 元 | 指導加給：$<span id="meta-leader-allowance">3,000</span> 元
+        </div>
+
+        <!-- 日薪外車表格 (日薪模式) -->
+        <div class="table-responsive mode-dayrate-only">
+          <table class="salary-table" id="salary-table">
+            <thead>
+              <tr>
+                <th class="col-date">日期</th>
+                <th class="col-day">星期</th>
+                <th class="col-location">工作地點</th>
+                <th class="col-duration">整天/半天</th>
+                <th class="col-wage">日薪</th>
+                <th class="col-overtime">加班費</th>
+                <th class="col-remarks">備註</th>
+              </tr>
+            </thead>
+            <tbody id="salary-table-body">
+              <!-- JS 動態生成 rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 智慧對帳匯入區 (加班模式) -->
+        <div class="import-box mode-overtime-only"
+          style="margin-bottom: 1.5rem; border: 2px dashed var(--success); display: flex; align-items: center; justify-content: center; gap: 1rem; padding: 1rem; background-color: rgba(16, 185, 129, 0.05); border-radius: var(--radius-md);">
+          <span style="font-weight: bold; color: var(--success); font-size: 0.95rem;">🚀 智慧對帳：</span>
+          <div class="import-btn-wrapper" style="position: relative; overflow: hidden; display: inline-block;">
+            <button class="btn btn-sm btn-primary" style="pointer-events: none;">選擇匯入鋒型系統 EXCEL / CSV 檔案</button>
+            <input type="file" id="excelFile" accept=".xlsx, .xls, .csv"
+              style="position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
+          </div>
+          <span style="font-size: 0.8rem; color: var(--text-secondary);">(自動解析整月加班與請假紀錄)</span>
+        </div>
+
+        <!-- 手動新增紀錄表單 (加班模式) -->
+        <div class="form-grid mode-overtime-only"
+          style="margin-bottom: 1.5rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; padding: 1.25rem; border-radius: var(--radius-md); border: 1px solid var(--card-border);">
+          <div class="form-group">
+            <label class="control-label"
+              style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">日期</label>
+            <input type="date" id="workDate" class="table-input"
+              style="border: 1px solid var(--border-color); height: 38px; padding: 0.5rem; border-radius: var(--radius-sm); background-color: var(--card-bg);">
+          </div>
+          <div class="form-group">
+            <label class="control-label"
+              style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">紀錄項目類別</label>
+            <select id="workType" class="table-input"
+              style="border: 1px solid var(--border-color); height: 38px; padding: 0.5rem; border-radius: var(--radius-sm); background-color: var(--card-bg);">
+              <option value="weekday">【加班】平日常態加班</option>
+              <option value="restday">【加班】休息日/放假回公司</option>
+              <option value="leave_spe">【請假】特別休假 (全薪)</option>
+              <option value="leave_sick">【請假】普通傷病假 (半薪)</option>
+              <option value="leave_fam">【請假】家庭照顧假 (無薪)</option>
+              <option value="leave_men">【請假】生理假 (半薪)</option>
+              <option value="leave_mourn">【請假】喪假 (全薪)</option>
+              <option value="leave_personal">【請假】事假 (無薪)</option>
+            </select>
+          </div>
+          <div class="form-group" id="timeStartGroup">
+            <label class="control-label"
+              style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">開始時間</label>
+            <input type="time" id="startTime" value="17:30" class="table-input"
+              style="border: 1px solid var(--border-color); height: 38px; padding: 0.5rem; border-radius: var(--radius-sm); background-color: var(--card-bg);">
+          </div>
+          <div class="form-group" id="timeEndGroup">
+            <label class="control-label"
+              style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">結束時間</label>
+            <input type="time" id="endTime" value="20:15" class="table-input"
+              style="border: 1px solid var(--border-color); height: 38px; padding: 0.5rem; border-radius: var(--radius-sm); background-color: var(--card-bg);">
+          </div>
+          <div class="form-group" id="breakGroup">
+            <label class="control-label" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">扣除休息
+              (分)</label>
+            <input type="number" id="breakMins" value="0" class="table-input"
+              style="border: 1px solid var(--border-color); height: 38px; padding: 0.5rem; border-radius: var(--radius-sm); background-color: var(--card-bg); text-align: left;">
+          </div>
+          <div class="form-group" id="hoursGroup" style="display:none;">
+            <label class="control-label" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">請假時數
+              (小時)</label>
+            <input type="number" id="leaveHours" value="8" min="1" max="8" class="table-input"
+              style="border: 1px solid var(--border-color); height: 38px; padding: 0.5rem; border-radius: var(--radius-sm); background-color: var(--card-bg); text-align: left;">
+          </div>
+          <div class="form-group" style="justify-content: flex-end;">
+            <button id="add-manual-record-btn" class="btn btn-primary"
+              style="height: 38px; width: 100%;">新增此筆紀錄</button>
+          </div>
+        </div>
+
+        <!-- 月薪加班表格 (加班模式) -->
+        <div class="table-responsive mode-overtime-only" style="margin-bottom: 1.5rem;">
+          <table class="salary-table" id="overtime-table">
+            <thead>
+              <tr>
+                <th style="width: 100px;">日期</th>
+                <th style="width: 120px;">類別</th>
+                <th>時間 / 時數</th>
+                <th style="width: 75px;">淨時數</th>
+                <th style="width: 75px;">1.34倍</th>
+                <th style="width: 75px;">1.67倍</th>
+                <th style="width: 75px;">2.67倍</th>
+                <th style="width: 100px;">增減金額</th>
+                <th style="width: 75px;">操作</th>
+              </tr>
+            </thead>
+            <tbody id="overtime-table-body">
+              <!-- JS 動態生成 rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 底部統計看板 (日薪模式) -->
+        <div class="summary-dashboard mode-dayrate-only">
+          <div class="summary-section left-calc">
+            <div class="summary-card">
+              <span class="summary-label">總工作天數</span>
+              <span class="summary-value" id="total-days">0</span>
+              <span class="summary-unit">天</span>
+            </div>
+            <div class="summary-card">
+              <span class="summary-label">全薪 (毛薪)</span>
+              <span class="summary-value highlight-blue" id="gross-salary">0</span>
+              <span class="summary-unit">元</span>
+            </div>
+          </div>
+
+          <div class="summary-section middle-inputs">
+            <div class="summary-input-group">
+              <label for="deduction-advance">借支扣除</label>
+              <div class="input-with-unit font-sm">
+                <span class="unit">NT$</span>
+                <input type="number" id="deduction-advance" min="0" value="0" placeholder="0">
+              </div>
+            </div>
+            <div class="summary-input-group">
+              <label for="adjustment-other">其他增減</label>
+              <div class="input-with-unit font-sm">
+                <span class="unit">NT$</span>
+                <input type="number" id="adjustment-other" value="0" placeholder="0">
+              </div>
+            </div>
+          </div>
+
+          <div class="summary-section right-total">
+            <div class="summary-card total-card">
+              <span class="summary-label">實領金額</span>
+              <span class="summary-value highlight-green" id="net-salary">0</span>
+              <span class="summary-unit">元</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 底部統計看板 (加班模式) -->
+        <div class="summary-dashboard mode-overtime-only"
+          style="grid-template-columns: 2fr 1fr; gap: 1rem; align-items: center;">
+          <div class="summary-section left-calc" style="flex: 2; display: flex; gap: 1rem;">
+            <div class="summary-card">
+              <span class="summary-label" style="color: var(--success-hover);">總累計加班費</span>
+              <span class="summary-value highlight-green">+$<span id="total-ot-pay">0</span></span>
+              <span class="summary-unit">元</span>
+            </div>
+            <div class="summary-card">
+              <span class="summary-label" style="color: var(--danger);">總請假扣薪額</span>
+              <span class="summary-value" style="color: var(--danger);">-$<span id="total-leave-cut">0</span></span>
+              <span class="summary-unit">元</span>
+            </div>
+          </div>
+          <div class="summary-section right-total" style="flex: 1;">
+            <div class="summary-card total-card" id="net-change-card">
+              <span class="summary-label" id="net-change-label">本月薪資預估增減</span>
+              <span class="summary-value" id="net-salary-change">$0</span>
+              <span class="summary-unit">元</span>
+            </div>
+          </div>
+          <div
+            style="display: flex; align-items: center; justify-content: flex-end; width: 100%; margin-top: 1rem; grid-column: span 2;">
+            <button id="clear-records-btn" class="btn btn-sm btn-outline"
+              style="border-color: var(--danger); color: var(--danger); width: auto;">清除所有紀錄</button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- 登入卡片遮罩 -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card card animate-fade-in">
+      <h2>🔒 工作薪水記錄保險箱</h2>
+      <p>這是一套安全的個人薪水與工作地點記錄表。請輸入您的個人登入碼（如您的名字或特定數字）以進入帳本。如果該登入碼是第一次使用，系統將自動為您建立一個全新的空白帳本。</p>
+      <p style="font-size: 0.85rem; color: var(--text-secondary);">⚠️ 這串登入碼同時也是您的密碼，請設定至少 6 個字元且不容易被猜到的組合，並請勿告知無關人士。</p>
+
+      <!-- PocketBase 登入碼表單 -->
+      <form id="login-form" class="login-form" onsubmit="return false;"
+        style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; text-align: left;">
+        <div class="control-group">
+          <label for="login-code" class="control-label" style="font-weight: 600; color: var(--text-primary);">請輸入您的登入碼
+            (Login Code)</label>
+          <input type="text" id="login-code" class="table-input" required placeholder="例如: chunhsien"
+            autocomplete="username"
+            style="border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 0.75rem 1rem; background-color: var(--card-bg); font-weight: bold; font-size: 1.1rem; text-align: center; letter-spacing: 1px;">
+        </div>
+
+        <div class="login-actions" style="margin-top: 0.5rem; display: flex; gap: 1rem;">
+          <button id="login-submit-btn" class="btn btn-primary"
+            style="flex: 1; padding: 0.75rem 1rem; font-size: 1rem; font-weight: bold;">進入帳本</button>
+        </div>
+      </form>
+
+      <div id="login-error" class="login-error"
+        style="display: none; color: var(--danger); font-weight: 600; margin-top: 1rem; font-size: 0.9rem;">
+        ❌ 處理失敗，請確認登入碼是否符合格式。
+      </div>
+      <div id="login-loading" class="login-loading"
+        style="display: none; color: var(--text-secondary); margin-top: 1rem; font-size: 0.9rem;">
+        處理中，請稍候...
+      </div>
+    </div>
+  </div>
+
+  <!-- html2canvas for exporting DOM as image -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- JavaScript file -->
+  <script src="app.js?v=1.0.6"></script>
+</body>
+
+</html>

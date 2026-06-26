@@ -1,0 +1,15 @@
+# PocketBase 執行檔與資料庫（部署時 Dockerfile 會自動下載官方版本；
+# 本機這份僅供本地開發測試，資料庫內含真實使用者資料，不應進版控）
+pocketbase.exe
+pb_data/
+pb_data_backup_before_migration/
+
+# Firebase Hosting 本機快取
+.firebase/
+
+# Claude Code 本機工具設定
+.claude/
+
+# 個人資料備份（含真實薪水紀錄）
+俊賢薪水核對/
+俊賢雲端薪水備份_*.json
