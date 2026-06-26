@@ -10,11 +10,12 @@ RUN unzip /tmp/pocketbase.zip -d /app && chmod +x /app/pocketbase && rm /tmp/poc
 # 設定工作目錄為 /app
 WORKDIR /app
 
-# 複製本機的資料庫結構遷移腳本到容器中
+# 複製本機的資料庫結構遷移腳本與自訂 hooks 到容器中
 COPY ./pb_migrations /app/pb_migrations
+COPY ./pb_hooks /app/pb_hooks
 
 # 暴露內部的 8080 連接埠 (Fly.io 預設埠)
 EXPOSE 8080
 
-# 啟動 PocketBase 服務，並將資料庫與遷移路徑指向正確路徑
-CMD ["/app/pocketbase", "serve", "--http=0.0.0.0:8080", "--dir=/pb_data", "--migrationsDir=/app/pb_migrations"]
+# 啟動 PocketBase 服務，並將資料庫、遷移、hooks 路徑指向正確路徑
+CMD ["/app/pocketbase", "serve", "--http=0.0.0.0:8080", "--dir=/pb_data", "--migrationsDir=/app/pb_migrations", "--hooksDir=/app/pb_hooks"]
