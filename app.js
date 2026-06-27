@@ -2002,9 +2002,14 @@ async function exportToImage() {
   });
 
   // 5. 設定複製元素的樣式與位置
-  clone.style.position = "absolute";
-  clone.style.left = "-9999px";
+  // 注意：不能用 left: -9999px 推到畫面外，部分手機瀏覽器（如 iOS Safari）
+  // 不會繪製太遠離可視範圍的元素，導致 html2canvas 截到一片空白。
+  // 改用固定在畫面內、但疊在最底層（z-index 負值）且不可互動的方式呈現。
+  clone.style.position = "fixed";
+  clone.style.left = "0";
   clone.style.top = "0";
+  clone.style.zIndex = "-1";
+  clone.style.pointerEvents = "none";
   clone.style.width = element.offsetWidth + "px";
   clone.style.backdropFilter = "none";
   clone.style.webkitBackdropFilter = "none";
