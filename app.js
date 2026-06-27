@@ -2024,7 +2024,7 @@ async function exportToImage() {
   try {
     const canvas = await html2canvas(clone, {
       useCORS: true,
-      scale: 2,
+      scale: 4,
       backgroundColor: isDark ? "#1e293b" : "#ffffff",
       logging: false
     });
