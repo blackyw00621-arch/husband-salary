@@ -2002,25 +2002,46 @@ async function exportToImage() {
   });
 
   // 5. 設定複製元素的樣式與位置
-  // 注意：不能用 left: -9999px 推到畫面外，部分手機瀏覽器（如 iOS Safari）
-  // 不會繪製太遠離可視範圍的元素，導致 html2canvas 截到一片空白。
-  // 改用固定在畫面內、但疊在最底層（z-index 負值）且不可互動的方式呈現。
-  clone.style.position = "fixed";
-  clone.style.left = "0";
-  clone.style.top = "0";
-  clone.style.zIndex = "-1";
-  clone.style.pointerEvents = "none";
+  // 注意：不能用 left: -9999px 推到畫面外（部分手機瀏覽器不會繪製太遠離可視範圍的元素），
+  // 也不能直接對要截圖的元素用 position: fixed（html2canvas 對 fixed 定位元素的處理
+  // 容易出問題，截出來會整片空白）。改用一個包在外面、固定在畫面左上角、
+  // 高度設為 0 且 overflow:hidden 的包裝容器，把 clone 正常放在裡面（不額外設定 position），
+  // 這樣 clone 本身仍是正常版面排列、瀏覽器會正常繪製內容，但視覺上完全被包裝容器裁切掉看不到。
+  const wrapper = document.createElement("div");
+  wrapper.style.position = "absolute";
+  wrapper.style.left = "0";
+  wrapper.style.top = "0";
+  wrapper.style.height = "0";
+  wrapper.style.overflow = "hidden";
+  wrapper.style.pointerEvents = "none";
+
   clone.style.width = element.offsetWidth + "px";
   clone.style.backdropFilter = "none";
   clone.style.webkitBackdropFilter = "none";
   clone.style.boxShadow = "none";
-  
+
+  // .main-panel 本身有 fade-in 進場動畫（animate-fade-in / delay-1），複製出來的
+  // clone 是全新插入畫面的節點，動畫會從頭（opacity: 0）重新播放一次。
+  // html2canvas 幾乎是立刻截圖，等不到動畫播完，截到的內容會幾乎透明、淡到看不見。
+  // 這裡把 clone（與裡面任何也帶這些 class 的元素）強制設成動畫已播完的最終狀態。
+  clone.classList.remove("animate-fade-in", "delay-1");
+  clone.style.opacity = "1";
+  clone.style.transform = "none";
+  clone.style.animation = "none";
+  clone.querySelectorAll(".animate-fade-in").forEach((el) => {
+    el.classList.remove("animate-fade-in", "delay-1");
+    el.style.opacity = "1";
+    el.style.transform = "none";
+    el.style.animation = "none";
+  });
+
   const isDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
   clone.style.backgroundColor = isDark ? "#1e293b" : "#ffffff";
   clone.style.color = isDark ? "#f8fafc" : "#1e293b";
-  
-  document.body.appendChild(clone);
-  
+
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+
   try {
     const canvas = await html2canvas(clone, {
       useCORS: true,
@@ -2028,24 +2049,24 @@ async function exportToImage() {
       backgroundColor: isDark ? "#1e293b" : "#ffffff",
       logging: false
     });
-    
-    document.body.removeChild(clone);
-    
+
+    document.body.removeChild(wrapper);
+
     const image = canvas.toDataURL("image/png");
     const link = document.createElement("a");
     link.href = image;
-    
+
     const filenameSuffix = state.appMode === "overtime" ? "加班對帳表" : "薪水工作表";
     link.download = `個人${filenameSuffix}_${state.year}年${state.month}月.png`;
-    
+
     document.body.appendChild(link);
     link.click();
     link.remove();
-    
+
     setSaveStatus(originalStatus);
   } catch (err) {
-    if (document.body.contains(clone)) {
-      document.body.removeChild(clone);
+    if (document.body.contains(wrapper)) {
+      document.body.removeChild(wrapper);
     }
     console.error("匯出圖片失敗", err);
     alert("匯出圖片失敗：" + err.message);
