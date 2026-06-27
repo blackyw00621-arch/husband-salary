@@ -8,12 +8,16 @@
       "pocketbase.exe",
       "pb_data/**",
       "pb_migrations/**",
+      "pb_hooks/**",
       "*.bat",
       "*.vbs",
       "Dockerfile",
       "fly.toml",
       "*.log",
-      "*.txt"
+      "*.txt",
+      "俊賢薪水核對/**",
+      "俊賢雲端薪水備份_*.json",
+      "README.md"
     ]
   }
 }
