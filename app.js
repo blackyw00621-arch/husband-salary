@@ -1298,15 +1298,107 @@ function handleExcelUpload(input) {
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      parseFengData(jsonData);
+      const otDetailHeaderIndex = findHeaderRow(jsonData, ["歸屬日期", "加班類型", "打卡承認時數"]);
+      if (otDetailHeaderIndex !== -1) {
+        parseOvertimeDetailData(jsonData, otDetailHeaderIndex);
+      } else {
+        parseFengData(jsonData);
+      }
     } catch (err) {
       console.error(err);
-      alert("解析 Excel 檔案失敗，請確保是正確的鋒型差勤報表。");
+      alert("解析 Excel 檔案失敗，請確保是正確的鋒型差勤報表或加班明細表。");
       setSaveStatus("同步失敗");
     }
   };
   reader.readAsArrayBuffer(file);
   input.value = '';
+}
+
+// 找出符合指定欄位名稱的表頭列索引，找不到回傳 -1
+function findHeaderRow(rows, requiredCols) {
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i] && requiredCols.every(col => rows[i].includes(col))) return i;
+  }
+  return -1;
+}
+
+// 解析「加班明細表」格式（歸屬日期 / 加班類型 / 打卡承認時數 / 加班時數使用方式）
+function parseOvertimeDetailData(rows, headerIndex) {
+  const { hourlyWage } = updateOvertimeWagesDisplay();
+  let importedCount = 0;
+
+  const headers = rows[headerIndex];
+  const idxDate = headers.indexOf("歸屬日期");
+  const idxOtType = headers.indexOf("加班類型");
+  const idxStart = headers.indexOf("起始時間");
+  const idxEnd = headers.indexOf("結束時間");
+  const idxConfirmedHours = headers.indexOf("打卡承認時數");
+  const idxAppliedHours = headers.indexOf("申請時數");
+  const idxUsage = headers.indexOf("加班時數使用方式");
+
+  if (!state.currentMonthData.records) state.currentMonthData.records = [];
+
+  for (let i = headerIndex + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.length === 0 || !row[idxDate]) continue;
+
+    const dateStr = String(row[idxDate]).trim().substring(0, 10);
+    if (isNaN(Date.parse(dateStr))) continue;
+
+    const otType = row[idxOtType] ? String(row[idxOtType]).trim() : "";
+    const usage = row[idxUsage] ? String(row[idxUsage]).trim() : "";
+
+    let otHours = parseFloat(row[idxConfirmedHours]);
+    if (isNaN(otHours) || otHours <= 0) {
+      otHours = parseFloat(row[idxAppliedHours]) || 0;
+    }
+    if (otHours <= 0) continue;
+
+    const startRaw = row[idxStart] ? String(row[idxStart]) : "";
+    const endRaw = row[idxEnd] ? String(row[idxEnd]) : "";
+    const startMatch = startRaw.match(/(\d{2}:\d{2})/);
+    const endMatch = endRaw.match(/(\d{2}:\d{2})/);
+    const timeStr = (startMatch && endMatch) ? `${startMatch[1]} ~ ${endMatch[1]}` : `${otHours} 小時`;
+
+    // 補休不發現金，不計入加班費金額（僅標注顯示，方便確認有這筆紀錄）
+    const isComp = usage.includes("補休");
+    const isRestDay = otType.includes("休息日");
+
+    let r134 = 0, r167 = 0, r267 = 0, finalAmt = 0;
+    let record = { id: Date.now() + i, date: dateStr, timeStr, netHours: otHours };
+
+    if (isRestDay) {
+      record.workType = "restday";
+      record.typeText = isComp ? "休息日加班 補休(0元)" : "休息日加班";
+      record.badgeClass = isComp ? "bg-leave-none" : "bg-restday";
+      if (!isComp) {
+        if (otHours <= 2) { r134 = otHours; }
+        else if (otHours <= 8) { r134 = 2; r167 = otHours - 2; }
+        else { r134 = 2; r167 = 6; r267 = otHours - 8; }
+      }
+    } else {
+      record.workType = "weekday";
+      record.typeText = isComp ? "平日加班 補休(0元)" : "平日加班";
+      record.badgeClass = isComp ? "bg-leave-none" : "bg-weekday";
+      if (!isComp) {
+        if (otHours <= 2) { r134 = otHours; } else { r134 = 2; r167 = otHours - 2; }
+      }
+    }
+
+    if (!isComp) {
+      finalAmt = Math.round((r134 * hourlyWage * (4/3)) + (r167 * hourlyWage * (5/3)) + (r267 * hourlyWage * (8/3)));
+    }
+
+    record.r134 = r134; record.r167 = r167; record.r267 = r267;
+    record.amount = finalAmt;
+
+    state.currentMonthData.records.push(record);
+    importedCount++;
+  }
+
+  saveToCloud();
+  renderOvertimeTable();
+  alert(`成功導入 ${importedCount} 筆精準紀錄！（加班明細表格式）`);
 }
 
 // 鋒型報表數據演算法
