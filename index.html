@@ -412,6 +412,14 @@
       <p>這是一套安全的個人薪水與工作地點記錄表。請輸入您的個人登入碼（如您的名字或特定數字）以進入帳本。如果該登入碼是第一次使用，系統將自動為您建立一個全新的空白帳本。</p>
       <p style="font-size: 0.85rem; color: var(--text-secondary);">⚠️ 這串登入碼同時也是您的密碼，請設定至少 6 個字元且不容易被猜到的組合，並請勿告知無關人士。</p>
 
+      <!-- 此裝置記住的快速登入（只存在本機瀏覽器，不會出現在程式碼裡） -->
+      <div id="quick-login-block" style="display: none; margin-top: 1.5rem;">
+        <button id="quick-login-btn" type="button" class="btn btn-primary"
+          style="width: 100%; padding: 0.75rem 1rem; font-size: 1rem; font-weight: bold;"></button>
+        <button id="quick-login-switch-btn" type="button"
+          style="margin-top: 0.5rem; background: none; border: none; color: var(--text-secondary); font-size: 0.85rem; text-decoration: underline; cursor: pointer; width: 100%; text-align: center;">使用其他登入碼</button>
+      </div>
+
       <!-- PocketBase 登入碼表單 -->
       <form id="login-form" class="login-form" onsubmit="return false;"
         style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; text-align: left;">

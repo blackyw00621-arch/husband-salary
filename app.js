@@ -95,6 +95,11 @@ const loginCodeInput = document.getElementById("login-code");
 const loginSubmitBtn = document.getElementById("login-submit-btn");
 const loginError = document.getElementById("login-error");
 const loginLoading = document.getElementById("login-loading");
+const loginForm = document.getElementById("login-form");
+const quickLoginBlock = document.getElementById("quick-login-block");
+const quickLoginBtn = document.getElementById("quick-login-btn");
+const quickLoginSwitchBtn = document.getElementById("quick-login-switch-btn");
+const REMEMBERED_LOGIN_KEY = "rememberedLoginCode";
 
 const userProfileWidget = document.getElementById("user-profile-widget");
 const userAvatarInitial = document.getElementById("user-avatar-initial");
@@ -170,7 +175,31 @@ window.addEventListener("DOMContentLoaded", () => {
   setupYearMonthSelector();
   setupEventListeners();
   setupAuthListener();
+  setupQuickLogin();
 });
+
+// 設定「記住這台裝置常用的登入碼」快速登入區塊
+// 登入碼只存在這台裝置的瀏覽器本機（localStorage），不會出現在公開的程式碼或網路上
+function setupQuickLogin() {
+  const rememberedCode = localStorage.getItem(REMEMBERED_LOGIN_KEY);
+  if (rememberedCode) {
+    quickLoginBtn.textContent = `繼續以 ${rememberedCode} 登入`;
+    quickLoginBlock.style.display = "block";
+    loginForm.style.display = "none";
+  }
+
+  quickLoginBtn.addEventListener("click", () => {
+    loginCodeInput.value = rememberedCode || "";
+    loginSubmitBtn.click();
+  });
+
+  quickLoginSwitchBtn.addEventListener("click", () => {
+    quickLoginBlock.style.display = "none";
+    loginForm.style.display = "flex";
+    loginCodeInput.value = "";
+    loginCodeInput.focus();
+  });
+}
 
 // 設定登入監聽器
 function setupAuthListener() {
@@ -698,6 +727,7 @@ function setupEventListeners() {
     try {
       // 1. 嘗試用此登入碼進行登入
       await pb.collection('users').authWithPassword(username, password);
+      localStorage.setItem(REMEMBERED_LOGIN_KEY, code);
     } catch (err) {
       // 2. 如果登入失敗，可能是因為該帳本尚未建立 (400)
       if (err.status === 400 || err.status === 404) {
@@ -715,6 +745,7 @@ function setupEventListeners() {
           });
           // 註冊後自動登入
           await pb.collection('users').authWithPassword(username, password);
+          localStorage.setItem(REMEMBERED_LOGIN_KEY, code);
           alert("🎉 偵測到新的登入碼，已為您自動建立全新帳本！");
         } catch (regErr) {
           console.error("自動建立帳本失敗", regErr);
